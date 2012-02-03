@@ -131,9 +131,13 @@ def make_version(version_number):
                    0:"Tuesday 4pm",
                    1:"Tuesday 5pm",
                    2:"Wednesday 5pm",
-                   3:"Friday 11am",
-                   4:"Monday 3pm"
+                   3:"Thursday 3pm",
+                   4:"Monday 5pm"
+                   5:"Tuesday 3pm",
+                   6:"Thursday 4pm",
+                   7:"Thursday 5pm",                   
                    }
+    
     version_selections = versioner()
     print("starting on %s" % version_number)
     #questions = get_questions_from_version(question_bank, version_selections)
