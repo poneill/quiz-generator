@@ -1,7 +1,7 @@
 #!/usr/bin/python
 import re, os, sys, random
 from subprocess import call
-
+print "starting"
 def split_on(xs, pred):
     """Split xs into a list of lists each beginning with the next x
     satisfying pred, except possibly the first"""
@@ -10,8 +10,7 @@ def split_on(xs, pred):
 
 def extract_on_context(xs, pred):
     """extract from xs  a list of lists, each beginning and ending with
-    an element satisfying pred, or beginning with an element satisfying
-    pred and ending with an element satisfying endPred"""
+    an element satisfying pred"""
     indices = [i for (i,v) in enumerate(xs) if pred(v)]
     index_sets = [(indices[i],indices[i+1]) for i in range(len(indices)) if i % 2 == 0]
     return [xs[i:j+1] for (i,j) in index_sets]
@@ -92,21 +91,6 @@ def scramble_choices(lines):
 
 def adjacents(xs):
     return zip([None]+xs,xs)[1:]
-    
-if len(sys.argv) > 1:
-    filename = sys.argv[1]
-else:
-    filename = "quiz5.tex"
-    
-with open(filename) as f:
-    lines = f.readlines()
-
-num_versions = int(re.search("NumberOfVersions{(\d)}","".join(lines)).group(1))
-chunks = split_into_blocks(lines)
-preamble, blocks = chunks[0],chunks[1:]
-sectioned_preamble = map(lambda(line):re.sub("Week","%s Week",line),preamble)
-versioned_preamble = map(lambda(line):re.sub("NumberOfVersions{(\d)}","NumberOfVersions{1}",line),sectioned_preamble)
-
 
 def make_question_versioner(question_bank):
     question_versions = []
@@ -123,26 +107,24 @@ def make_question_versioner(question_bank):
 def get_questions_from_version(question_bank, version):
     return sum(map(lambda(q,v): q[v],zip(question_bank,version)),[])
     
-question_bank = map(extract_questions,blocks)
-versioner = make_question_versioner(question_bank)
-
-def make_version(version_number):
+def make_version(version_number,versioner):
     date_string = {
                    0:"Tuesday 4pm",
                    1:"Tuesday 5pm",
                    2:"Wednesday 5pm",
                    3:"Thursday 3pm",
-                   4:"Monday 5pm"
+                   4:"Monday 5pm",
                    5:"Tuesday 3pm",
                    6:"Thursday 4pm",
-                   7:"Thursday 5pm",                   
+                   7:"Thursday 5pm"
                    }
     
     version_selections = versioner()
     print("starting on %s" % version_number)
     #questions = get_questions_from_version(question_bank, version_selections)
     questions = sum(map(select_question_from_block,blocks),[])
-    final_preamble = "".join(versioned_preamble ) % date_string[version_number]
+    final_preamble = "".join(versioned_preamble) % date_string[version_number]
+    
     text = final_preamble + "".join(questions)
     return text
 
@@ -154,10 +136,10 @@ def unique(xs):
         rest = xs[1:]
         return (not x in rest) and unique(rest)
 
-def make_unique_versions(num_versions):
+def make_unique_versions(num_versions,versioner):
     versions = []
     while len(versions) < num_versions:
-        version = make_version(len(versions))
+        version = make_version(len(versions),versioner)
         if not version in versions:
             versions.append(version)
     return versions
@@ -173,20 +155,27 @@ def generate_quiz(quiz_text,version_num):
     print(command)
     call("pdflatex " + outfile,shell=True)
 
-quiz_texts = make_unique_versions(num_versions)
-for version_num, quiz_text in enumerate(quiz_texts):
-    generate_quiz(quiz_text,version_num)
     
-for version in range(num_versions):
-    version_selections = versioner()
-    print("starting on %s" % version)
-    questions = sum(map(select_question_from_block,blocks),[])
-    text = "".join(versioned_preamble + questions)
-    name, ext = os.path.splitext(filename)
-    outfile = name + chr(version + 97)+ext
-    with open(outfile,'w') as g:
-        g.write(text)
-    command = "pdflatex -quiet" + outfile
-    print(command)
-    call("pdflatex " + outfile,shell=True)
-    
+if __name__ == "__main__":
+    print "in the main"
+    if len(sys.argv) > 1:
+        filename = sys.argv[1]
+    else:
+        filename = "quiz1.tex"
+        
+    with open(filename) as f:
+        lines = f.readlines()
+
+    num_versions = int(re.search("NumberOfVersions{(\d)}","".join(lines)).group(1))
+    chunks = split_into_blocks(lines)
+    preamble, blocks = chunks[0],chunks[1:]
+    sectioned_preamble = map(lambda(line):re.sub("Week","%s Week",line),preamble)
+    versioned_preamble = map(lambda(line):re.sub("NumberOfVersions{(\d)}",
+                                                 "NumberOfVersions{1}",line),
+                             sectioned_preamble)
+    question_bank = map(extract_questions,blocks)
+    versioner = make_question_versioner(question_bank)
+    quiz_texts = make_unique_versions(num_versions,versioner)
+
+    for version_num, quiz_text in enumerate(quiz_texts):
+        generate_quiz(quiz_text,version_num)
